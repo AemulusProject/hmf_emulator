@@ -7,8 +7,8 @@
  *  @bug No known bugs.
  */
 
-#include "C_massfunction.h"
-#include "C_peak_height.h"
+#include "massfunction.h"
+#include "peak_height.h"
 
 #include "gsl/gsl_integration.h"
 #include "gsl/gsl_sf.h"
