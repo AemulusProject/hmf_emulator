@@ -97,11 +97,11 @@ class hmf_emulator(Aemulator):
             y    = means[:, i]
             def nll(p):
                 gp.set_parameter_vector(p)
-                ll = gp.lnlikelihood(y, quiet=True)
+                ll = gp.log_likelihood(y, quiet=True)
                 return -ll if np.isfinite(ll) else 1e25
             def grad_nll(p):
                 gp.set_parameter_vector(p)
-                return -gp.grad_lnlikelihood(y, quiet=True)
+                return -gp.grad_log_likelihood(y, quiet=True)
             p0 = gp.get_parameter_vector()
             result = op.minimize(nll, p0, jac=grad_nll)
             gp.set_parameter_vector(result.x)
