@@ -195,8 +195,8 @@ class hmf_emulator(Aemulator):
         cos_arr[6] = params['N_eff']
         cos_arr = np.atleast_2d(cos_arr)
 
-        means = self.means.T #Transpose of mean data
-        output = np.array([gp.predict(y, cos_arr) for y,gp in zip(means, self.GP_list)])
+        means = self.training_mean.T #Transpose of mean data
+        output = np.array([gp.predict(y, cos_arr)[0] for y,gp in zip(means, self.GP_list)])
         return np.dot(self.rotation_matrix, output).flatten()
 
     def set_cosmology(self, params):
@@ -259,15 +259,21 @@ class hmf_emulator(Aemulator):
         redshifts = np.array(redshifts)
         if redshifts.ndim > 1:
             raise Exception("Redshifts be either a scalar or 1D array.")
-        h, Omega_M = self.h, self.Omega_m #Hubble constant and matter fraction
+        h, Omega_m = self.h, self.Omega_m #Hubble constant and matter fraction
         k, M = self.k, self.M #wavenumbers and halo masses
+        Nk = len(k)
+        NM = len(M)
         kh = k/h #h/Mpc
         for i,z in enumerate(np.atleast_1d(redshifts)):
-            if z in self.computed_sigma2.keys:
+            if z in self.computed_sigma2.keys():
                 continue
             p = np.array([self.cc.pk_lin(ki, z) for ki in k])*h**3 #[Mpc/h]^3
-            self.computed_sigma2[z]    = _lib.sigma2_at_M(_dc(M), _dc(kh), _dc(p), Omega_m)
-            self.computed_dsigma2dM[z] = _lib.dsigma2dM_at_M(_dc(M), _dc(kh), _dc(p), Omega_m)
+            sigma2    = np.zeros_like(M)
+            dsigma2dM = np.zeros_like(M)
+            _lib.sigma2_at_M_arr(   _dc(M), NM, _dc(kh), _dc(p), Nk, Omega_m, _dc(sigma2))
+            _lib.dsigma2dM_at_M_arr(_dc(M), NM, _dc(kh), _dc(p), Nk, Omega_m, _dc(dsigma2dM))
+            self.computed_sigma2[z]    = sigma2
+            self.computed_dsigma2dM[z] = dsigma2dM
             self.computed_pk[z] = p
             continue
         return
@@ -275,36 +281,45 @@ class hmf_emulator(Aemulator):
     def dndM(self, Masses, redshifts):
         if not self.cosmology_is_set:
             raise Exception("Must set_cosmology() first.")
-        Masses = np.array(Masses, order='C')
-        if Masses.ndim >1:
+        Masses    = np.atleast_1d(Masses)
+        redshifts = np.atleast_1d(redshifts)
+        if Masses.ndim > 1:
             raise Exception("Masses must be either scalar or 1D array.")
-        if any(Masses < 1e10) or any(Masses > 16.5):
+        if redshifts.ndim > 1:
+            raise Exception("Redshifts must be either scalar or 1D array.")
+        if any(Masses < 1e10) or any(Masses > 10**16.5):
             raise Exception("Mass outside of range 1e10-1e16.5 Msun/h.")
         if any(redshifts > 5):
             raise Exception("Redshift greater than 5.")
         if any(redshifts > 3):
             print("Warning: redshift greather than 3. Accuracy not guaranteed.")
 
-        self._compute_sigma(self, redshifts)
+        self._compute_sigma(redshifts)
         Omega_m = self.Omega_m
-        lnM = np.log(Masses)
-        NM = len(np.atleast_1d(Masses))
-        Nz = len(np.atleast_1d(redshifts))
+        lnMasses = np.log(Masses)
+        NM = len(Masses)
+        Nz = len(redshifts)
         dndM_out = np.zeros((Nz, NM))
-        output = _dc(np.zeros_like(Masses))
-        for i,z in enumerate(np.atleast_1d(redshifts)):
+        for i,z in enumerate(redshifts):
             d,e,f,g = self._compute_massfunction_parameters(z)
-            lnsigma2_spline = IUS(np.log(self.M), np.log(self.computed_sigma2))
-            lndsigma2dM_spline = IUS(np.log(self.M), np.log(self.computed_dsigma2dM))
-            sigma2    = np.exp(lnsigma2_spline(lnM))
-            dsigma2dM = np.exp(lndsigma2dM_spline(lnM))
-            _lib.dndM_sigma2_precomputed(_dc(Masses), _dc(sigma2), _dc(dsigma2dM), NM, Omega_m, d, e, f, g, output)
-            dndM_out[i] = out
+            sigma2_spline    = IUS(np.log(self.M), self.computed_sigma2[z])
+            dsigma2dM_spline = IUS(np.log(self.M), self.computed_dsigma2dM[z])
+            sigma2    = sigma2_spline(lnMasses)
+            dsigma2dM = dsigma2dM_spline(lnMasses)
+            output = np.zeros_like(Masses)
+            _lib.dndM_sigma2_precomputed(_dc(Masses), _dc(sigma2), _dc(dsigma2dM), NM, Omega_m,
+                                         d, e, f, g, _dc(output))
+            dndM_out[i] = output
             continue
+        if Nz == 1:
+            return dndM_out.flatten()
         return dndM_out
 
     def n_in_bins(self, Mass_bin_edges, redshifts):
-        Mass_bin_edges = np.array(Mass_bin_edges, order='C')
+        Mass_bin_edges = np.atleast_1d(Mass_bin_edges)
+        redshifts = np.atleast_1d(redshifts)
+        if len(Mass_bin_edges) < 2:
+            raise Exception("Mass bin edges must have at least a left and right edge.")
         if Mass_bin_edges.ndim > 1:
             raise Exception("Mass bin edges must be a 1D array.")
         if any(redshifts > 5):
@@ -312,19 +327,20 @@ class hmf_emulator(Aemulator):
         if any(redshifts > 3):
             print("Warning: redshift greather than 3. Accuracy not guaranteed.")
 
+        Omega_m = self.Omega_m
         Nz = len(np.atleast_1d(redshifts))
         output = np.zeros((Nz, len(Mass_bin_edges)-1))
         M = self.M
         NM = len(M)
-        dndM   = _dc(np.zeros_like(M))
-        n_bins = _dc(np.zeros(len(Mass_bin_edges)-1))
+        dndM   = np.zeros_like(M)
+        n_bins = np.zeros(len(Mass_bin_edges)-1)
         for i,z in enumerate(np.atleast_1d(redshifts)):
             d,e,f,g = self._compute_massfunction_parameters(z)
             self._compute_sigma(z)
             sigma2    = self.computed_sigma2[z]
             dsigma2dM = self.computed_dsigma2dM[z]
-            _lib.dndM_sigma2_precomputed(_dc(N), _dc(sigma2), _dc(dsigma2dM), NM, Omega_m, d, e, f, g, dndM)
-            _lib.n_in_bins(_dc(Mass_bin_edges), len(Mass_bin_edges), _dc(M), dndM, NM, n_bins)
+            _lib.dndM_sigma2_precomputed(_dc(M), _dc(sigma2), _dc(dsigma2dM), NM, Omega_m, d, e, f, g, _dc(dndM))
+            _lib.n_in_bins(_dc(Mass_bin_edges), len(Mass_bin_edges), _dc(M), _dc(dndM), NM, _dc(n_bins))
             output[i] = n_bins
             continue
         if Nz == 1:
@@ -334,3 +350,13 @@ class hmf_emulator(Aemulator):
 if __name__=="__main__":
     e = hmf_emulator()
     print(e)
+    cosmology={
+        "omega_b": 0.027,
+        "omega_cdm": 0.114,
+        "w0": -0.82,
+        "n_s": 0.975,
+        "ln10As": 3.09,
+        "H0": 65.,
+        "N_eff": 3.
+    }
+    print(e.predict(cosmology))
