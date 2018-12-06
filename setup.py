@@ -31,7 +31,7 @@ dist = setup(name="hmf",
              package_data={'hmf' : headers},
              include_package_data=True,
              ext_modules=[ext],
-             install_requires=['cffi','numpy'],
+             install_requires=['cffi','numpy','scipy','george'],
              setup_requires=['pytest_runner'],
              tests_require=['pytest'])
 
