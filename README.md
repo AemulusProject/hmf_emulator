@@ -1,2 +1,4 @@
-# hmf_emulator
-Emulator for the halo mass function by The Aemulus Project.
+# Halo mass function emulator
+Emulator for the halo mass function from The Aemulus Project. Using this emulator is fairly straightforward. To use the emulator, first install [george](http://dfm.io/george/current/) via pip and [Class](https://github.com/lesgourg/class_public) (not via pip), as well the [Aemulator](https://github.com/AemulusProject/Aemulator/tree/master/Aemulator) tool (which will be pip installable soon).
+
+Once you have done so, you can clone this repository and install using `python setup.py install`.
