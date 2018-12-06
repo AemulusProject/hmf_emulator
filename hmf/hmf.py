@@ -5,7 +5,7 @@ import numpy as np
 import os, inspect
 import scipy.optimize as op
 import george
-from george.kernels import *
+import pickle
 
 class hmf_emulator(Aemulator):
 
@@ -73,7 +73,7 @@ class hmf_emulator(Aemulator):
         for i in range(self.N_GPs):
             y    = means[:, i]
             ystd = stddev[:, i]
-            kernel = ExpSquaredKernel(hyperparams, ndim=N_cosmological_params)
+            kernel = george.kernels.ExpSquaredKernel(hyperparams, ndim=N_cosmological_params)
             gp = george.GP(kernel, mean=np.mean(y),
                            white_noise=np.log(np.mean(ystd)**2))
             gp.compute(self.training_cosmologies, ystd)
@@ -83,6 +83,11 @@ class hmf_emulator(Aemulator):
         return
 
     def train_emulator(self):
+        """
+        Optimize the hyperparmeters of a built emulator against training data.
+        :return:
+            None
+        """
         if not self.built:
             raise Exception("Need to build before training.")
 
@@ -104,12 +109,47 @@ class hmf_emulator(Aemulator):
         return
 
     def cache_emulator(self, filename):
-        pass
+        """
+        Cache the emulator to a file for easier re-loadig. 
+        :param filename:
+            The filename where the trained emulator will be cached.
+        :return:
+            None
+        """
+        with open(filename, "wb") as output_file:
+            pickle.dump(self, output_file)
+        return
 
     def load_emulator(self, filename):
-        pass
+        """
+        Load an emulator directly from file, pre-trained.
+        :param filename:
+            The filename where the trained emulator is located, in a format compatible with
+            this object.
+        :return:
+            None
+        """
+        if not os.path.isfile(filename):
+            raise Exception("%s does not exist to load."%filename)
+        with open(filename, "rb") as input_file:
+            emu = pickle.load(input_file)
+            #Loop over attributes and assign them to this emulator
+            for a in dir(emu):
+                if not a.startwith("__") and not callable(getattr(emu, a)):
+                    setattr(self, a, getattr(emu, a))
+                continue
+        return
 
     def predict(self, params):
+        """
+        Use the emulator to make a prediction at a point in parameter space.
+        :param params:
+            A dictionary of parameters, where the key is the parameter name and
+            value is its value.
+        :return:
+            pred, the emulator prediction at params. Will be a float or numpy array,
+            depending on the quantity being emulated.
+        """
         pass
 
 if __name__=="__main__":
