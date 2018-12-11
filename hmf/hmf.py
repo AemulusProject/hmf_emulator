@@ -249,9 +249,7 @@ class hmf_emulator(Aemulator):
         self.cosmology_is_set = True
         return
 
-    def _compute_massfunction_parameters(self, redshifts):
-        if not self.cosmology_is_set:
-            raise Exception("Must set_cosmology() first.")
+    def predict_massfunction_parameters(self, redshifts):
         e0,f0,g0,d1,e1,g1 = self.mf_slopes_and_intercepts
         d0, f1 = [ 2.39279115, 0.11628991]
         x = 1./(1+redshifts)-0.5
@@ -309,7 +307,7 @@ class hmf_emulator(Aemulator):
         Nz = len(redshifts)
         dndM_out = np.zeros((Nz, NM))
         for i,z in enumerate(redshifts):
-            d,e,f,g = self._compute_massfunction_parameters(z)
+            d,e,f,g = self.predict_massfunction_parameters(z)
             sigma2_spline    = IUS(np.log(self.M), self.computed_sigma2[z])
             dsigma2dM_spline = IUS(np.log(self.M), self.computed_dsigma2dM[z])
             sigma2    = sigma2_spline(lnMasses)
@@ -324,6 +322,8 @@ class hmf_emulator(Aemulator):
         return dndM_out
 
     def n_in_bins(self, Mass_bin_edges, redshifts):
+        if not self.cosmology_is_set:
+            raise Exception("Must set_cosmology() first.")
         Mass_bin_edges = np.atleast_1d(Mass_bin_edges)
         redshifts = np.atleast_1d(redshifts)
         if len(Mass_bin_edges) < 2:
@@ -343,7 +343,7 @@ class hmf_emulator(Aemulator):
         dndM   = np.zeros_like(M)
         n_bins = np.zeros(len(Mass_bin_edges)-1)
         for i,z in enumerate(np.atleast_1d(redshifts)):
-            d,e,f,g = self._compute_massfunction_parameters(z)
+            d,e,f,g = self.predict_massfunction_parameters(z)
             self._compute_sigma(z)
             sigma2    = self.computed_sigma2[z]
             dsigma2dM = self.computed_dsigma2dM[z]
