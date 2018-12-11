@@ -209,6 +209,14 @@ class hmf_emulator(Aemulator):
         :return:
             None
         """
+        try:
+            from classy import Class
+        except ImportError:
+            print("Class not installed. Cannot compute the mass function "+
+                  "directly, only predict "+
+                  "parameters from the GPs using the predict() function.")
+            return
+
         self.mf_slopes_and_intercepts = self.predict(params)
         #Set up a CLASS dictionary
         self.h = params['H0']/100.
