@@ -1,0 +1,6 @@
+Aemulator
+cffi>=1.10.0
+numpy>=1.15
+scipy>=1.0
+george>=0.3.1
+
