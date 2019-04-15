@@ -11,16 +11,16 @@ from classy import Class
 #Create the CFFI library
 hmf_dir = os.path.dirname(__file__)
 include_dir = os.path.join(hmf_dir,'include')
-lib_file    = os.path.join(hmf_dir,'_hmf.so')
+lib_file    = os.path.join(hmf_dir,'_hmf_emulator.so')
 # Some installation (e.g. Travis with python 3.x)
 # name this e.g. _hmf.cpython-34m.so,
 # so if the normal name doesn't exist, look for something else.
 if not os.path.exists(lib_file):
-    alt_files = glob.glob(os.path.join(os.path.dirname(__file__),'_hmf*.so'))
+    alt_files = glob.glob(os.path.join(os.path.dirname(__file__),'_hmf_emulator*.so'))
     if len(alt_files) == 0:
-        raise IOError("No file '_hmf.so' found in %s"%hmf_dir)
+        raise IOError("No file '_hmf_emulator.so' found in %s"%hmf_dir)
     if len(alt_files) > 1:
-        raise IOError("Multiple files '_hmf*.so' found in %s: %s"%(hmf_dir,alt_files))
+        raise IOError("Multiple files '_hmf_emulator*.so' found in %s: %s"%(hmf_dir,alt_files))
     lib_file = alt_files[0]
 _ffi = cffi.FFI()
 for file_name in glob.glob(os.path.join(include_dir,'*.h')):

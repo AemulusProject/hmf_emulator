@@ -60,7 +60,9 @@ double dsigma2dR_integrand(double lk, void*params){
   double sx = sin(x);
   double cx = cos(x);
   double w = (sx-x*cx)*3.0/(x*x*x); //Window function
+  //Factor of 3 gets pulled out elsewhere
   double dwdR = k*3*((x*x-3)*sx + 3*x*cx)/(x*x*x*x);
+  //double dwdR = k*((x*x-3)*sx + 3*x*cx)/(x*x*x*x);
   return k*k*k*P*w*dwdR;
 }
 
@@ -96,6 +98,9 @@ int sigma2_at_R_arr(double*R, int NR,  double*k, double*P, int Nk, double*s2){
   double lkmin = log(k[0]);
   double lkmax = log(k[Nk-1]);
   double result,abserr;
+  //Divide by 2pi^2, but note we pull a factor of 2
+  //out of the integrand because we take dw^2/dR
+  //We also pull a factor of 3 out of the integrand.
   double denom_inv = 1./(2*M_PI*M_PI);
   int i;
   gsl_spline_init(spline,k,P,Nk);
@@ -142,7 +147,8 @@ int dsigma2dR_at_R_arr(double*R, int NR, double*k, double*P, int Nk, double*ds2d
   double lkmin = log(k[0]);
   double lkmax = log(k[Nk-1]);
   double result,abserr;
-  double denom_inv = 1./(2*M_PI*M_PI);
+  //Note: the factor of 2 from within the integrand cancels here
+  double denom_inv = 1./(M_PI*M_PI);
   int i;
   gsl_spline_init(spline,k,P,Nk);
   params->spline = spline;

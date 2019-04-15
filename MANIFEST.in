@@ -1,1 +1,1 @@
-recursive-include hmf/data_files *
+recursive-include hmf_emulator/data_files *

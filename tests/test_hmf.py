@@ -1,10 +1,10 @@
 import pytest
-from hmf import *
+from hmf_emulator import *
 import numpy as np
 import numpy.testing as npt
 
 #Create an emulator
-h = hmf.hmf_emulator()
+h = hmf_emulator()
 
 def test_hmf_emulator_load_data():
     npt.assert_equal(h.loaded_data, True)
