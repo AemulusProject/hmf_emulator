@@ -312,7 +312,7 @@ class hmf_emulator(Aemulator):
         dndM_out = np.zeros((Nz, NM))
         for i,z in enumerate(redshifts):
             d,e,f,g = self.predict_massfunction_parameters(z)
-            sigma2_spline = self.computed_sigma_splines[z]
+            sigma2_spline = self.computed_sigma2_splines[z]
             dsigma2dM_spline = self.computed_dsigma2dM_splines[z]
             sigma2    = sigma2_spline(lnMasses)
             dsigma2dM = dsigma2dM_spline(lnMasses)
