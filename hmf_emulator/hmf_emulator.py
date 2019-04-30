@@ -245,6 +245,8 @@ class hmf_emulator(Aemulator):
         self.M = np.logspace(10, 16.5, num=1000) # Msun/h
         self.computed_sigma2    = {}
         self.computed_dsigma2dM = {}
+        self.computed_sigma2_splines = {}
+        self.computed_dsigma2dM_splines = {}
         self.computed_pk        = {}
         self.cosmology_is_set = True
         return
@@ -280,6 +282,8 @@ class hmf_emulator(Aemulator):
             _lib.dsigma2dM_at_M_arr(_dc(M), NM, _dc(kh), _dc(p), Nk, Omega_m, _dc(dsigma2dM))
             self.computed_sigma2[z]    = sigma2
             self.computed_dsigma2dM[z] = dsigma2dM
+            self.computed_sigma2_splines[z] = IUS(np.log(self.M), sigma2)
+            self.computed_dsigma2dM_splines[z] = IUS(np.log(self.M), dsigma2dM)
             self.computed_pk[z] = p
             continue
         return
@@ -308,8 +312,8 @@ class hmf_emulator(Aemulator):
         dndM_out = np.zeros((Nz, NM))
         for i,z in enumerate(redshifts):
             d,e,f,g = self.predict_massfunction_parameters(z)
-            sigma2_spline    = IUS(np.log(self.M), self.computed_sigma2[z])
-            dsigma2dM_spline = IUS(np.log(self.M), self.computed_dsigma2dM[z])
+            sigma2_spline = self.computed_sigma_splines[z]
+            dsigma2dM_spline = self.computed_dsigma2dM_splines[z]
             sigma2    = sigma2_spline(lnMasses)
             dsigma2dM = dsigma2dM_spline(lnMasses)
             output = np.zeros_like(Masses)
