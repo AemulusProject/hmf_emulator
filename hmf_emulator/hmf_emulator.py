@@ -230,7 +230,7 @@ class hmf_emulator(Aemulator):
             'wa_fld':       0.0,
             'omega_b':      params['omega_b'],
             'omega_cdm':    params['omega_cdm'],
-            'Omega_Lambda': 1 - self.Omega_m,
+            'Omega_Lambda': 0.0,
             'N_eff':        params['N_eff'],
             'P_k_max_1/Mpc': 10.,
             'z_max_pk':      5.03
